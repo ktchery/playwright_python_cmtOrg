@@ -1,0 +1,23 @@
+[
+  "part_3_main_test_script.py::test_auditorium_images",
+  "part_3_main_test_script.py::test_auditorium_video",
+  "part_3_main_test_script.py::test_contact_page",
+  "part_3_main_test_script.py::test_contact_page_negative",
+  "part_3_main_test_script.py::test_contact_page_positive",
+  "part_3_main_test_script.py::test_home_page_title",
+  "part_3_main_test_script.py::test_mumford_hall_images",
+  "part_3_main_test_script.py::test_mumford_hall_video",
+  "part_3_main_test_script.py::test_navigation_to_auditorium_page",
+  "part_3_main_test_script.py::test_railton_hall_images",
+  "part_3_main_test_script.py::test_railton_hall_video",
+  "test_script_main.py::test_auditorium_images",
+  "test_script_main.py::test_auditorium_video",
+  "test_script_main.py::test_contact_page_negative",
+  "test_script_main.py::test_contact_page_positive",
+  "test_script_main.py::test_home_page_title",
+  "test_script_main.py::test_mumford_hall_images",
+  "test_script_main.py::test_mumford_hall_video",
+  "test_script_main.py::test_navigation_to_auditorium_page",
+  "test_script_main.py::test_railton_hall_images",
+  "test_script_main.py::test_railton_hall_video"
+]
