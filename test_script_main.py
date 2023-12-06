@@ -10,9 +10,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 @pytest.fixture(scope="session")
 def playwright_browser():
     with sync_playwright() as playwright:
-        browser = playwright.firefox.launch(headless=False, slow_mo=1000)
+        browser = playwright.firefox.launch(headless=True, slow_mo=1000)
         yield browser
         browser.close()
+
 
 @pytest.fixture(scope="session")
 def playwright_context(playwright_browser):
