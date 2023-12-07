@@ -14,6 +14,7 @@ def playwright_browser():
         yield browser
         browser.close()
 
+
 @pytest.fixture(scope="session")
 def playwright_context(playwright_browser):
     context = playwright_browser.new_context(record_video_dir='videos/')
