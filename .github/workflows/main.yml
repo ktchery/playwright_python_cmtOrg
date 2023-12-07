@@ -26,7 +26,7 @@ jobs:
     - name: Run Playwright tests
       run: |
         playwright install
-        pytest --html-report=report
+        pytest --html=report.html
 
     - name: Archive Playwright Test Report
       uses: actions/upload-artifact@v2
