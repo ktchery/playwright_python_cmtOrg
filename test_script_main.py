@@ -155,6 +155,7 @@ def test_mumford_hall_images(playwright_context):
 
 @pytest.mark.smoke
 @pytest.mark.regression
+@pytest.mark.submits_real_form
 def test_contact_page_positive(playwright_context):
     page = playwright_context.new_page()
     contact_page = ContactPage(page)
@@ -172,6 +173,7 @@ def test_contact_page_positive(playwright_context):
         page.close()
 
 @pytest.mark.regression
+@pytest.mark.submits_real_form
 def test_contact_page_negative(playwright_context):
     page = playwright_context.new_page()
     contact_page = ContactPage(page)

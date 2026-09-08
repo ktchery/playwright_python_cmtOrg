@@ -46,8 +46,11 @@ pytest -m smoke           # quick confidence check (5 tests, ~30 s)
 pytest -m regression      # full regression set
 pytest -v --log-cli-level=INFO   # with live step-by-step logging
 
-HEADLESS=1 pytest         # unattended / CI (~50 s)
+HEADLESS=1 pytest         # unattended (~50 s)
 HEADLESS=1 SLOW_MO=300 pytest    # headless, with pacing between actions
+
+# What CI runs: everything except the tests that post to the real contact form
+HEADLESS=1 pytest -m "not submits_real_form"    # 8 tests, ~30 s
 ```
 
 The suite runs against the **live production site**. By default it opens a visible Firefox
@@ -55,7 +58,21 @@ window with a 1-second delay between actions so a human can follow along; set `H
 to run it unattended, which is roughly 2.5x faster.
 
 > **Note:** `test_contact_page_positive` and `test_contact_page_negative` submit real
-> messages through the site's contact form.
+> messages through the site's contact form. There is no staging site, so these carry the
+> `submits_real_form` marker and are excluded from every unattended run. Run them
+> deliberately, not in a loop.
+
+## Continuous integration
+
+[`.github/workflows/tests.yml`](.github/workflows/tests.yml) runs the suite headless on
+GitHub Actions, weekly and on manual dispatch — **not** on every push. The target is a
+third-party production site belonging to a nonprofit, so hammering it on each commit would
+be rude and would tell us nothing new. A scheduled run is the right shape here: it catches
+the site drifting out from under the tests, which is the actual failure mode this suite
+guards against.
+
+CI deselects `submits_real_form`, so it runs 8 of the 10 tests. On failure it uploads the
+trace, videos, and screenshots as artifacts.
 
 ## Artifacts
 
@@ -73,7 +90,8 @@ test_utility_basepage.py   BasePage — navigation, video verification, test-dat
 test_page_classes.py       Page objects: HomePage, AuditoriumPage, RailtonHallPage,
                            MumfordHallPage, ContactPage
 test_script_main.py        Test cases and Playwright fixtures
-pytest.ini                 Marker registration (smoke, regression)
+pytest.ini                 Marker registration (smoke, regression, submits_real_form)
+.github/workflows/         CI: weekly + manual headless run
 ```
 
 ## Design notes
@@ -105,5 +123,8 @@ navigation targets component class names instead.
   with no dependable readiness signal; a submission that lands too early is silently
   accepted with no validation banner. `reset_form()` waits for the latest hydration marker
   available, which helps but does not eliminate it. Headed runs are stable because
-  `slow_mo` paces the interaction. Options if this matters: run that test headed, or add
-  `pytest-rerunfailures` and rerun it on failure.
+  `slow_mo` paces the interaction. It is excluded from CI anyway by the
+  `submits_real_form` marker, so the flakiness is confined to deliberate local runs. If it
+  becomes a problem there: run it headed, or add `pytest-rerunfailures`.
+- Nothing tests the site's mobile layout. Playwright device emulation
+  (`browser.new_context(**playwright.devices['iPhone 13'])`) would be the cheapest way in.

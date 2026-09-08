@@ -1,0 +1,54 @@
+name: UI tests
+
+# Deliberately not run on every push. The suite exercises a third-party
+# production site (there is no staging), so it is scheduled and manual rather
+# than fired on every commit.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * 1'  # Mondays, 13:00 UTC
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      - name: Install Firefox
+        run: playwright install firefox --with-deps
+
+      # submits_real_form is excluded: those tests post through the live contact
+      # form, which reaches a real inbox. See pytest.ini.
+      - name: Run tests
+        env:
+          HEADLESS: '1'
+        run: pytest -v -m "not submits_real_form"
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            trace.zip
+            videos/
+            error_*.png
+          retention-days: 7
+          if-no-files-found: ignore
