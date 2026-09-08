@@ -51,6 +51,10 @@ HEADLESS=1 SLOW_MO=300 pytest    # headless, with pacing between actions
 
 # What CI runs: everything except the tests that post to the real contact form
 HEADLESS=1 pytest -m "not submits_real_form"    # 8 tests, ~30 s
+
+# Mobile: run the same suite against an emulated device
+DEVICE="iPhone 13" HEADLESS=1 pytest -m "not submits_real_form"
+DEVICE="Pixel 5" BROWSER=chromium HEADLESS=1 pytest
 ```
 
 The suite runs against the **live production site**. By default it opens a visible Firefox
@@ -61,6 +65,22 @@ to run it unattended, which is roughly 2.5x faster.
 > messages through the site's contact form. There is no staging site, so these carry the
 > `submits_real_form` marker and are excluded from every unattended run. Run them
 > deliberately, not in a loop.
+
+## Mobile
+
+`DEVICE` runs the whole suite against an emulated device rather than a desktop viewport —
+real viewport, user agent, touch support, and device pixel ratio, not just a narrow window:
+
+```bash
+DEVICE="iPhone 13" HEADLESS=1 pytest -m "not submits_real_form"
+```
+
+Device names come from Playwright's registry (`iPhone 13`, `Pixel 5`, `iPad Mini`, …); an
+unrecognised name fails at setup with the valid options rather than silently running
+desktop. `BROWSER` overrides the engine when you need it.
+
+All 8 unattended tests pass under iPhone 13 emulation, so the site's mobile layout keeps
+the same galleries and video embeds as desktop.
 
 ## Continuous integration
 
@@ -110,6 +130,12 @@ in it is accepted, so there is no phone validation to assert; the positive test 
 with a generated number to confirm the optional field is accepted. The adjacent 22px-wide
 `autocomplete="new-password"` input is a spam honeypot and is deliberately never filled.
 
+**Device profiles pick their own engine.** Each Playwright device profile names the engine
+it emulates, and it matters: iPhone profiles are WebKit, and Firefox rejects them outright
+because it does not support `isMobile`. The browser fixture follows the profile rather than
+forcing the desktop default, so `DEVICE="iPhone 13"` runs on WebKit — the engine Safari
+actually uses — while desktop runs stay on Firefox.
+
 **Selectors prefer stable hooks.** Squarespace's accessibility labels have changed over the
 site's life (the lightbox arrow's label changed from `Next Item` to `Next`), so gallery
 navigation targets component class names instead.
@@ -126,5 +152,7 @@ navigation targets component class names instead.
   `slow_mo` paces the interaction. It is excluded from CI anyway by the
   `submits_real_form` marker, so the flakiness is confined to deliberate local runs. If it
   becomes a problem there: run it headed, or add `pytest-rerunfailures`.
-- Nothing tests the site's mobile layout. Playwright device emulation
-  (`browser.new_context(**playwright.devices['iPhone 13'])`) would be the cheapest way in.
+- Mobile coverage reuses the desktop assertions. It confirms the same content and galleries
+  work on a phone, but nothing yet asserts mobile-specific chrome such as the hamburger nav.
+- Fixtures live in `test_script_main.py` rather than a `conftest.py`, so a second test module
+  could not reuse them without moving them first.

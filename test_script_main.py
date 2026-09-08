@@ -19,18 +19,52 @@ TRACE_PATH = ARTIFACT_DIR / "trace.zip"
 HEADLESS = os.getenv("HEADLESS", "0").lower() not in ("0", "false", "")
 SLOW_MO = int(os.getenv("SLOW_MO", "0" if HEADLESS else "1000"))
 
+# DEVICE emulates a phone or tablet, e.g. DEVICE="iPhone 13". BROWSER overrides the
+# engine (firefox, chromium, webkit); left unset it follows the device profile.
+DEVICE = os.getenv("DEVICE")
+BROWSER = os.getenv("BROWSER")
+
 
 @pytest.fixture(scope="session")
-def playwright_browser():
+def playwright_instance():
     with sync_playwright() as playwright:
-        browser = playwright.firefox.launch(headless=HEADLESS, slow_mo=SLOW_MO)
-        yield browser
-        browser.close()
+        yield playwright
 
 
 @pytest.fixture(scope="session")
-def playwright_context(playwright_browser):
-    context = playwright_browser.new_context(record_video_dir=str(VIDEO_DIR))
+def device_descriptor(playwright_instance):
+    """The Playwright device profile named by DEVICE, or None for a desktop run."""
+    if not DEVICE:
+        return None
+    try:
+        return playwright_instance.devices[DEVICE]
+    except KeyError:
+        raise ValueError(
+            f"Unknown DEVICE {DEVICE!r}. Names come from Playwright's device registry, "
+            f"e.g. 'iPhone 13', 'Pixel 5', 'iPad Mini'."
+        )
+
+
+@pytest.fixture(scope="session")
+def playwright_browser(playwright_instance, device_descriptor):
+    # Each device profile names the engine it emulates, and that matters: iPhone
+    # profiles are WebKit, and Firefox rejects them outright because it does not
+    # support isMobile. Follow the profile unless BROWSER overrides it.
+    engine = BROWSER or (
+        device_descriptor["default_browser_type"] if device_descriptor else "firefox"
+    )
+    browser = getattr(playwright_instance, engine).launch(headless=HEADLESS, slow_mo=SLOW_MO)
+    logging.info(f"Launched {engine}" + (f" emulating {DEVICE}" if DEVICE else " (desktop)"))
+    yield browser
+    browser.close()
+
+
+@pytest.fixture(scope="session")
+def playwright_context(playwright_browser, device_descriptor):
+    context_args = {"record_video_dir": str(VIDEO_DIR)}
+    if device_descriptor:
+        context_args.update(device_descriptor)
+    context = playwright_browser.new_context(**context_args)
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
     yield context
     context.tracing.stop(path=str(TRACE_PATH))

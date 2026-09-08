@@ -1,12 +1,16 @@
 name: UI tests
 
-# Deliberately not run on every push. The suite exercises a third-party
-# production site (there is no staging), so it is scheduled and manual rather
-# than fired on every commit.
+# Manual only. The suite exercises a third-party production site (there is no
+# staging), so nothing here fires on its own: no push trigger, no schedule.
+# Every run is someone deliberately pressing "Run workflow" in the Actions tab.
+#
+# To enable a weekly run later, uncomment the two schedule lines below. Do that
+# only if whoever operates thecmt.org is expecting the traffic - an unexplained
+# weekly burst of browser sessions can look like scraping from the far end.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 13 * * 1'  # Mondays, 13:00 UTC
+  # schedule:
+  #   - cron: '0 13 * * 1'  # Mondays, 13:00 UTC
 
 jobs:
   test:
