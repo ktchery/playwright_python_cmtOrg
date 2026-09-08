@@ -45,10 +45,14 @@ pytest                    # full suite (~2 min)
 pytest -m smoke           # quick confidence check (5 tests, ~30 s)
 pytest -m regression      # full regression set
 pytest -v --log-cli-level=INFO   # with live step-by-step logging
+
+HEADLESS=1 pytest         # unattended / CI (~50 s)
+HEADLESS=1 SLOW_MO=300 pytest    # headless, with pacing between actions
 ```
 
-The suite runs against the **live production site**, in a visible Firefox window with a
-1-second delay between actions so a human can follow along.
+The suite runs against the **live production site**. By default it opens a visible Firefox
+window with a 1-second delay between actions so a human can follow along; set `HEADLESS=1`
+to run it unattended, which is roughly 2.5x faster.
 
 > **Note:** `test_contact_page_positive` and `test_contact_page_negative` submit real
 > messages through the site's contact form.
@@ -83,6 +87,11 @@ the expected video is embedded in the page's DOM, and only then checks the embed
 resolves. Checking reachability alone would pass even if the video were removed from the
 site entirely.
 
+**The contact form's phone field is optional and unvalidated.** Submitting `abc-not-a-phone`
+in it is accepted, so there is no phone validation to assert; the positive test populates it
+with a generated number to confirm the optional field is accepted. The adjacent 22px-wide
+`autocomplete="new-password"` input is a spam honeypot and is deliberately never filled.
+
 **Selectors prefer stable hooks.** Squarespace's accessibility labels have changed over the
 site's life (the lightbox arrow's label changed from `Next Item` to `Next`), so gallery
 navigation targets component class names instead.
@@ -91,4 +100,10 @@ navigation targets component class names instead.
 
 - The suite targets a third-party Squarespace site, so selectors and the golden image lists
   are coupled to its current markup and will need updating when the site changes.
-- It runs headed by design, which means it can't currently run unattended in CI.
+- `test_contact_page_negative` is not yet fully reliable headless (roughly 4 runs in 5).
+  The contact form is React-rendered and its handlers bind some time after the page loads,
+  with no dependable readiness signal; a submission that lands too early is silently
+  accepted with no validation banner. `reset_form()` waits for the latest hydration marker
+  available, which helps but does not eliminate it. Headed runs are stable because
+  `slow_mo` paces the interaction. Options if this matters: run that test headed, or add
+  `pytest-rerunfailures` and rerun it on failure.

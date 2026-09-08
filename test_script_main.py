@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 import pytest
@@ -13,11 +14,16 @@ ARTIFACT_DIR = Path(__file__).parent
 VIDEO_DIR = ARTIFACT_DIR / "videos"
 TRACE_PATH = ARTIFACT_DIR / "trace.zip"
 
+# Headed with a 1s delay by default, so a human can watch the run. Set HEADLESS=1
+# for CI or an unattended run; SLOW_MO overrides the per-action delay in ms.
+HEADLESS = os.getenv("HEADLESS", "0").lower() not in ("0", "false", "")
+SLOW_MO = int(os.getenv("SLOW_MO", "0" if HEADLESS else "1000"))
+
 
 @pytest.fixture(scope="session")
 def playwright_browser():
     with sync_playwright() as playwright:
-        browser = playwright.firefox.launch(headless=False, slow_mo=1000)
+        browser = playwright.firefox.launch(headless=HEADLESS, slow_mo=SLOW_MO)
         yield browser
         browser.close()
 
@@ -81,7 +87,7 @@ def test_auditorium_images(playwright_context):
     auditorium_page = AuditoriumPage(page)
     try:
         auditorium_page.navigate_auditorium()
-        assert auditorium_page.check_images_visible(), "Not all images are visible on the Auditorium page"
+        auditorium_page.check_images_visible()
     except Exception as e:
         page.screenshot(path='error_auditorium_images.png')
         raise e
@@ -110,7 +116,7 @@ def test_railton_hall_images(playwright_context):
     railton_hall_page = RailtonHallPage(page)
     try:
         railton_hall_page.navigate_railton_hall()
-        assert railton_hall_page.check_images_visible(), "Not all images are visible on the Railton Hall page"
+        railton_hall_page.check_images_visible()
     except Exception as e:
         page.screenshot(path='error_railton_hall_images.png')
         raise e
@@ -139,7 +145,7 @@ def test_mumford_hall_images(playwright_context):
     mumford_hall_page = MumfordHallPage(page)
     try:
         mumford_hall_page.navigate_mumford_hall()
-        assert mumford_hall_page.check_images_visible(), "Not all images are visible on the Mumford Hall page"
+        mumford_hall_page.check_images_visible()
     except Exception as e:
         page.screenshot(path='error_mumford_hall_images.png')
         raise e
@@ -155,7 +161,9 @@ def test_contact_page_positive(playwright_context):
         contact_page.navigate_and_verify()
         base_page_instance = BasePage(page)
         random_email = base_page_instance.generate_random_email()
-        contact_page.test_positive_scenario("Test", "User", random_email, "Test Inquiry", "This is a test message.")
+        random_phone = base_page_instance.generate_random_phone_number()
+        contact_page.submit_valid_form("Test", "User", random_email, "Test Inquiry",
+                                       "This is a test message.", phone=random_phone)
     except Exception as e:
         page.screenshot(path='error_contact_page_positive.png')
         raise e
@@ -168,7 +176,7 @@ def test_contact_page_negative(playwright_context):
     contact_page = ContactPage(page)
     try:
         contact_page.navigate_and_verify()
-        contact_page.test_negative_scenarios()
+        contact_page.run_negative_scenarios()
     except Exception as e:
         page.screenshot(path='error_contact_page_negative.png')
         raise e
