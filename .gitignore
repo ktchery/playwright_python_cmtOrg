@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Pytest
+.pytest_cache/
+
+# Test artifacts (regenerated on every run)
+videos/
+trace.zip
+*.webm
+error_*.png
+report.html
+
+# IDE
+.idea/

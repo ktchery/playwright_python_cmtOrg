@@ -1,10 +1,17 @@
 import logging
+from pathlib import Path
+
 import pytest
 from playwright.sync_api import sync_playwright
 from test_utility_basepage import BasePage
 from test_page_classes import HomePage, AuditoriumPage, RailtonHallPage, MumfordHallPage, ContactPage
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Absolute paths: Playwright resolves these against the driver process, not pytest's cwd.
+ARTIFACT_DIR = Path(__file__).parent
+VIDEO_DIR = ARTIFACT_DIR / "videos"
+TRACE_PATH = ARTIFACT_DIR / "trace.zip"
 
 
 @pytest.fixture(scope="session")
@@ -16,10 +23,10 @@ def playwright_browser():
 
 @pytest.fixture(scope="session")
 def playwright_context(playwright_browser):
-    context = playwright_browser.new_context(record_video_dir='videos/')
+    context = playwright_browser.new_context(record_video_dir=str(VIDEO_DIR))
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
     yield context
-    context.tracing.stop()
+    context.tracing.stop(path=str(TRACE_PATH))
     context.close()
 
 
@@ -37,7 +44,6 @@ def test_home_page_title(playwright_context):
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.smoke
 @pytest.mark.regression
@@ -53,7 +59,6 @@ def test_navigation_to_auditorium_page(playwright_context):
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.regression
 def test_auditorium_video(playwright_context):
@@ -62,13 +67,12 @@ def test_auditorium_video(playwright_context):
     auditorium_page = AuditoriumPage(page)
     try:
         auditorium_page.navigate_auditorium()
-        assert auditorium_page.is_video_playing("https://www.youtube.com/embed/FzW2EzZcJVM"), "Video did not load successfully"
+        assert auditorium_page.check_video_playing(), "Expected video is not embedded on the Auditorium page"
     except Exception as e:
         page.screenshot(path='error_auditorium_video.png')
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.regression
 def test_auditorium_images(playwright_context):
@@ -83,7 +87,6 @@ def test_auditorium_images(playwright_context):
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.smoke
 @pytest.mark.regression
@@ -93,13 +96,12 @@ def test_railton_hall_video(playwright_context):
     railton_hall_page = RailtonHallPage(page)
     try:
         railton_hall_page.navigate_railton_hall()
-        assert railton_hall_page.is_video_playing("https://www.youtube.com/embed/FzW2EzZcJVM"), "Video did not load successfully"
+        assert railton_hall_page.check_video_playing(), "Expected video is not embedded on the Railton Hall page"
     except Exception as e:
         page.screenshot(path='error_railton_hall_video.png')
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.regression
 def test_railton_hall_images(playwright_context):
@@ -114,7 +116,6 @@ def test_railton_hall_images(playwright_context):
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.smoke
 @pytest.mark.regression
@@ -124,13 +125,12 @@ def test_mumford_hall_video(playwright_context):
     mumford_hall_page = MumfordHallPage(page)
     try:
         mumford_hall_page.navigate_mumford_hall()
-        assert mumford_hall_page.is_video_playing("https://www.youtube.com/embed/FzW2EzZcJVM"), "Video did not load successfully"
+        assert mumford_hall_page.check_video_playing(), "Expected video is not embedded on the Mumford Hall page"
     except Exception as e:
         page.screenshot(path='error_mumford_hall_video.png')
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.regression
 def test_mumford_hall_images(playwright_context):
@@ -145,7 +145,6 @@ def test_mumford_hall_images(playwright_context):
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.smoke
 @pytest.mark.regression
@@ -162,7 +161,6 @@ def test_contact_page_positive(playwright_context):
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()
 
 @pytest.mark.regression
 def test_contact_page_negative(playwright_context):
@@ -176,4 +174,3 @@ def test_contact_page_negative(playwright_context):
         raise e
     finally:
         page.close()
-        playwright_context.tracing.stop()

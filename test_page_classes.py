@@ -41,12 +41,11 @@ class AuditoriumPage(BasePage):
     def __init__(self, page):
         super().__init__(page)
 
+    VIDEO_ID = "FzW2EzZcJVM"
+
     def check_video_playing(self):
-        video_url = "https://www.youtube.com/embed/FzW2EzZcJVM"
-        if self.is_video_playing(video_url):
-            logging.info("The video on Auditorium Hall page is playing.")
-        else:
-            logging.error("The video on Auditorium Hall page is not playing.")
+        """Verify the Auditorium page embeds the expected video and that it loads."""
+        return self.verify_embedded_video(self.VIDEO_ID)
 
     def check_images_visible(self):
         try:
@@ -71,11 +70,12 @@ class AuditoriumPage(BasePage):
 
 
             self.page.locator('(//img[@alt="CMT HouseLeft.png"])').click()
-            for image in images:
+            for idx, image in enumerate(images):
                 expect(self.page.locator(f"//img[@data-src='https://images.squarespace-cdn.com/content/v1/59676b47197aeab037427537/{image}']").first).to_be_visible()
-                self.page.locator('//a[@aria-label="Next Item"]').click()
+                if idx < len(images) - 1:
+                    self.page.locator('a.sqs-lightbox-next').click()
 
-            self.page.locator("//a[@class='sqs-lightbox-close']").click()
+            self.page.locator("a.sqs-lightbox-close").click()
 
             return True  # All images were successfully checked and visible
 
@@ -93,12 +93,11 @@ class RailtonHallPage(BasePage):
     def __init__(self, page):
         super().__init__(page)
 
+    VIDEO_ID = "FzW2EzZcJVM"
+
     def check_video_playing(self):
-        video_url = "https://www.youtube.com/embed/FzW2EzZcJVM"
-        if self.is_video_playing(video_url):
-            logging.info("The video on Railton Hall page is playing.")
-        else:
-            logging.error("The video on Railton Hall page is not playing.")
+        """Verify the Railton page embeds the expected video and that it loads."""
+        return self.verify_embedded_video(self.VIDEO_ID)
 
     def check_images_visible(self):
        try:
@@ -110,19 +109,20 @@ class RailtonHallPage(BasePage):
             "//img[@data-src='https://images.squarespace-cdn.com/content/v1/59676b47197aeab037427537/1580812511400-MGUF6LDBXQKT3D1GS9MJ/Railton+IMG_2841.jpg']"
         ]
 
-        for locator in image_locators:
-            # Check if the locator is for the specific image
-            if locator == "//img[@data-src='https://images.squarespace-cdn.com/content/v1/59676b47197aeab037427537/1580812436962-WQW4G9LVZKXZD7RN1UXT/Railton+IMG_2905.jpg']":
+        for idx, locator in enumerate(image_locators):
+            # Open the lightbox on the first image
+            if idx == 0:
                 self.page.click(locator)
                 logging.info(f"Clicked on image at {locator}")
 
             expect(self.page.locator(locator).first).to_be_visible()
             logging.info(f"Image at {locator} is visible.")
 
-            # Logic to click 'Next Item' for each image
-            self.page.click('//a[@aria-label="Next Item"]')
+            # Advance to the next image, except after the last one
+            if idx < len(image_locators) - 1:
+                self.page.click('a.sqs-lightbox-next')
                 # Close the image viewer at the end
-        self.page.click("//a[@class='sqs-lightbox-close']")
+        self.page.click("a.sqs-lightbox-close")
 
         return True  # All images were successfully checked and visible
 
@@ -141,12 +141,11 @@ class MumfordHallPage(BasePage):
         expect(self.page).to_have_url("https://thecmt.org/new-index-1", timeout=7000)
         expect(self.page.locator("//h1[text()='Mumford Hall:']").first).to_have_text("Mumford Hall:", timeout=7000)
 
+    VIDEO_ID = "FzW2EzZcJVM"
+
     def check_video_playing(self):
-        video_url = "https://www.youtube.com/embed/FzW2EzZcJVM"
-        if self.is_video_playing(video_url):
-            logging.info("The video on Mumford Hall page is playing.")
-        else:
-            logging.error("The video on Mumford Hall page is not playing.")
+        """Verify the Mumford page embeds the expected video and that it loads."""
+        return self.verify_embedded_video(self.VIDEO_ID)
 
     def check_images_visible(self):
        try:
@@ -158,19 +157,20 @@ class MumfordHallPage(BasePage):
             "//img[@data-src='https://images.squarespace-cdn.com/content/v1/59676b47197aeab037427537/1580811988623-IN6JF6PCKVF1RFVJZJC2/Mumford-bkgd-IMG_5533.jpg']",
         ]
 
-        for locator in image_locators:
-            # Check if the locator is for the specific image
-            if locator == "//img[@data-src='https://images.squarespace-cdn.com/content/v1/59676b47197aeab037427537/1580811977152-RKF5BQ8BT0UWYS1L8VLV/Mumford+Hall-IMG_3123-3.jpg']":
+        for idx, locator in enumerate(image_locators):
+            # Open the lightbox on the first image
+            if idx == 0:
                 self.page.click(locator)
                 logging.info(f"Clicked on image at {locator}")
 
             expect(self.page.locator(locator).first).to_be_visible()
             logging.info(f"Image at {locator} is visible.")
 
-            # Logic to click 'Next Item' for each image
-            self.page.click('//a[@aria-label="Next Item"]')
+            # Advance to the next image, except after the last one
+            if idx < len(image_locators) - 1:
+                self.page.click('a.sqs-lightbox-next')
                 # Close the image viewer at the end
-        self.page.click("//a[@class='sqs-lightbox-close']")
+        self.page.click("a.sqs-lightbox-close")
 
         return True  # All images were successfully checked and visible
 

@@ -21,6 +21,19 @@ class BasePage:
         characters = string.ascii_letters + string.digits
         return ''.join(random.choice(characters) for _ in range(8)) + "@yopmail.com"
 
+    def verify_embedded_video(self, video_id):
+        """Check the page actually embeds the expected video, then that the embed loads.
+
+        The DOM check is the part that tests the site: it fails if the video is
+        removed from the page or swapped for a different one. The reachability
+        check then confirms the video itself still resolves.
+        """
+        embed = self.page.locator(f"iframe[src*='{video_id}']").first
+        expect(embed).to_be_attached(timeout=10000)
+        src = embed.get_attribute("src")
+        logging.info(f"Found embedded video {video_id} on {self.page.url}")
+        return self.is_video_playing(src)
+
     def is_video_playing(self, video_url):
         response = requests.get(video_url)
         if response.status_code == 200:
