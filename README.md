@@ -127,11 +127,20 @@ including both the obvious cheat (delete the assertion) and the subtle one (swap
 ## Continuous integration
 
 [`.github/workflows/tests.yml`](.github/workflows/tests.yml) runs the suite headless on
-GitHub Actions, weekly and on manual dispatch — **not** on every push. The target is a
-third-party production site belonging to a nonprofit, so hammering it on each commit would
-be rude and would tell us nothing new. A scheduled run is the right shape here: it catches
-the site drifting out from under the tests, which is the actual failure mode this suite
-guards against.
+GitHub Actions, **monthly and on manual dispatch — never on push**.
+
+The cadence is a deliberate trade. The target is a third-party production site belonging to
+a nonprofit, with no staging environment, so monthly works out to roughly 12 runs a year at
+8 page loads each — about a hundred page views annually, indistinguishable from someone
+browsing the site occasionally. Weekly or per-push would be a visible, unexplained pattern
+of browser sessions against a server we do not operate.
+
+There is a schedule at all because this suite exists to catch the site drifting out from
+under the tests, and drift is exactly what a manual run cannot find — it went unnoticed here
+for two years. Monthly is slow enough to be polite and often enough to catch it.
+
+Failures arrive by email through GitHub's own Actions notifications (Settings →
+Notifications → Actions → "failed workflows only"); no mail service or secrets required.
 
 CI deselects `submits_real_form`, so it runs 15 of the 17 tests — 8 browser tests plus the
 7 offline unit tests for the healing guard. On failure it uploads the trace, videos, and

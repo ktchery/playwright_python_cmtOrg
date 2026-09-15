@@ -1,16 +1,22 @@
 name: UI tests
 
-# Manual only. The suite exercises a third-party production site (there is no
-# staging), so nothing here fires on its own: no push trigger, no schedule.
-# Every run is someone deliberately pressing "Run workflow" in the Actions tab.
+# Monthly, plus manual dispatch. Never on push.
 #
-# To enable a weekly run later, uncomment the two schedule lines below. Do that
-# only if whoever operates thecmt.org is expecting the traffic - an unexplained
-# weekly burst of browser sessions can look like scraping from the far end.
+# The suite exercises a third-party production site belonging to a nonprofit,
+# and there is no staging environment, so the cadence is a deliberate trade
+# rather than a default. Monthly is roughly 12 runs a year at 8 page loads each
+# - about a hundred page views annually, which is indistinguishable from a
+# person browsing the site occasionally. Weekly or per-push would be a visible,
+# unexplained pattern of browser sessions against a server we do not operate.
+#
+# The point of a schedule at all is that this suite exists to catch the site
+# drifting out from under the tests, and drift is exactly what a manual run
+# cannot find - it went unnoticed here for two years. Monthly is slow enough to
+# be polite and often enough to catch that.
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 13 * * 1'  # Mondays, 13:00 UTC
+  schedule:
+    - cron: '0 13 1 * *'  # 1st of the month, 13:00 UTC
 
 jobs:
   test:
