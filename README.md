@@ -82,6 +82,48 @@ desktop. `BROWSER` overrides the engine when you need it.
 All 8 unattended tests pass under iPhone 13 emulation, so the site's mobile layout keeps
 the same galleries and video embeds as desktop.
 
+## Self-healing selectors (proposal-only by design)
+
+`heal_selector.py` is the repair half of an AI-assisted test workflow, with the dangerous
+half deliberately removed. Given a selector that no longer matches, it inspects the live
+page, works out which element that selector used to mean, proposes a more stable
+replacement, verifies the proposal resolves, and prints a diff.
+
+**It never edits a test file.**
+
+```bash
+python heal_selector.py \
+    --url https://thecmt.org/auditorium-2 \
+    --selector '//a[@aria-label="Next Item"]' \
+    --open '//img[@alt="CMT HouseLeft.png"]' \
+    --test-file test_page_classes.py
+```
+
+That example is not hypothetical. It is the real breakage in this repo's history: Squarespace
+renamed the lightbox arrow's label from `Next Item` to `Next`, which broke three gallery
+tests. Run against the pre-fix file from commit `b3cd861^`, the tool proposes
+`a.sqs-lightbox-next` — the same fix that was reached by hand.
+
+**How it picks.** Selector words are weighted by how rare they are on the page. In
+`//a[@aria-label="Next Item"]` the word that identifies the control is `next`; `item` is
+generic UI vocabulary shared with every nav link. Weighting by inverse document frequency
+lets the discriminating word decide. Page-level containers are excluded before scoring
+rather than merely out-scored — a `<body>` carrying 200 theme classes matches almost any
+token by coincidence, which is exactly what the first version of this tool did.
+
+**Why it only proposes.** A healing agent that can rewrite tests can make a failing suite
+pass by asserting less: deleting the step it cannot satisfy, or loosening an assertion until
+it holds. That is precisely the failure mode this suite was built to catch — three of its
+video tests once passed while verifying nothing at all. An agent allowed to commit its own
+fixes can recreate that silently and at speed.
+
+So every proposal goes through a human, and any patch that would reduce what a file checks
+is rejected outright. `assertion_signature()` compares expect() calls, assert statements and
+assertion methods before and after; dropping or weakening any of them fails the guard. That
+guard is covered by [`test_heal_selector.py`](test_heal_selector.py) — offline, 7 tests,
+including both the obvious cheat (delete the assertion) and the subtle one (swap
+`to_have_text` for `to_be_attached`).
+
 ## Continuous integration
 
 [`.github/workflows/tests.yml`](.github/workflows/tests.yml) runs the suite headless on
@@ -91,8 +133,9 @@ be rude and would tell us nothing new. A scheduled run is the right shape here: 
 the site drifting out from under the tests, which is the actual failure mode this suite
 guards against.
 
-CI deselects `submits_real_form`, so it runs 8 of the 10 tests. On failure it uploads the
-trace, videos, and screenshots as artifacts.
+CI deselects `submits_real_form`, so it runs 15 of the 17 tests — 8 browser tests plus the
+7 offline unit tests for the healing guard. On failure it uploads the trace, videos, and
+screenshots as artifacts.
 
 ## Artifacts
 
@@ -110,7 +153,9 @@ test_utility_basepage.py   BasePage — navigation, video verification, test-dat
 test_page_classes.py       Page objects: HomePage, AuditoriumPage, RailtonHallPage,
                            MumfordHallPage, ContactPage
 test_script_main.py        Test cases and Playwright fixtures
-pytest.ini                 Marker registration (smoke, regression, submits_real_form)
+heal_selector.py           Proposes replacements for selectors that stopped matching
+test_heal_selector.py      Offline tests for the healing guard
+pytest.ini                 Marker registration (smoke, regression, unit, submits_real_form)
 .github/workflows/         CI: weekly + manual headless run
 ```
 
