@@ -120,7 +120,7 @@ fixes can recreate that silently and at speed.
 So every proposal goes through a human, and any patch that would reduce what a file checks
 is rejected outright. `assertion_signature()` compares expect() calls, assert statements and
 assertion methods before and after; dropping or weakening any of them fails the guard. That
-guard is covered by [`test_heal_selector.py`](test_heal_selector.py) — offline, 7 tests,
+guard is covered by [`test_heal_selector.py`](test_heal_selector.py) — offline, 8 tests,
 including both the obvious cheat (delete the assertion) and the subtle one (swap
 `to_have_text` for `to_be_attached`).
 
@@ -142,8 +142,8 @@ for two years. Monthly is slow enough to be polite and often enough to catch it.
 Failures arrive by email through GitHub's own Actions notifications (Settings →
 Notifications → Actions → "failed workflows only"); no mail service or secrets required.
 
-CI deselects `submits_real_form`, so it runs 15 of the 17 tests — 8 browser tests plus the
-7 offline unit tests for the healing guard. On failure it uploads the trace, videos, and
+CI deselects `submits_real_form`, so it runs 16 of the 18 tests — 8 browser tests plus the
+8 offline unit tests for the healing guard. On failure it uploads the trace, videos, and
 screenshots as artifacts.
 
 ## Artifacts
