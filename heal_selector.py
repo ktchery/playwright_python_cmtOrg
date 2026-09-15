@@ -221,8 +221,20 @@ def assertion_signature(source):
 
 
 def guard(original, patched):
-    """Reject a patch that reduces what the file checks."""
-    before, after = assertion_signature(original), assertion_signature(patched)
+    """Reject a patch that reduces what the file checks.
+
+    A patch that does not parse is rejected, not raised: a healing agent can
+    emit broken Python, and "your tool crashed" is a much worse answer than
+    "that patch is invalid".
+    """
+    try:
+        before = assertion_signature(original)
+    except SyntaxError as exc:
+        return [f"original file does not parse: {exc}"], {}, {}
+    try:
+        after = assertion_signature(patched)
+    except SyntaxError as exc:
+        return [f"patch does not parse: {exc}"], before, {}
     problems = []
     if after["expect"] < before["expect"]:
         problems.append(f"expect() calls dropped {before['expect']} -> {after['expect']}")

@@ -68,6 +68,13 @@ def test_guard_rejects_a_weakened_assertion():
     assert any("to_have_text" in p for p in problems)
 
 
+def test_guard_rejects_an_unparseable_patch():
+    """A healing agent can emit broken Python. Reject it, do not crash."""
+    problems, _, _ = guard(ORIGINAL, "def check_images(page:\n    expect(")
+    assert problems, "guard must reject a patch that does not parse"
+    assert any("does not parse" in p for p in problems)
+
+
 def test_guard_allows_adding_assertions():
     patched = ORIGINAL + '    expect(page.locator("#x").first).to_be_visible()\n'
     problems, _, _ = guard(ORIGINAL, patched)
