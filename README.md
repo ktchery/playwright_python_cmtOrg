@@ -124,6 +124,53 @@ guard is covered by [`test_heal_selector.py`](test_heal_selector.py) — offline
 including both the obvious cheat (delete the assertion) and the subtle one (swap
 `to_have_text` for `to_be_attached`).
 
+## API layer
+
+[`test_api.py`](test_api.py) checks the site over HTTP with no browser: 42 tests in about
+6 seconds. It answers one question — is the site up, serving the right pages, and will a
+visitor get a working experience?
+
+```bash
+pytest -m api                 # 42 tests, ~6 s, no browser
+pytest -m "api or unit"       # everything that needs no browser, ~9 s
+```
+
+Squarespace serves structured data for any page by appending `?format=json`, and that is
+where most of these assertions live. Page titles, url ids and video references sit in real
+structured fields that survive a reskin — which matters, because both of this suite's worst
+defects came from testing generated markup.
+
+**Every path, title, video id and gallery filename is imported from the page objects.**
+Nothing is re-typed. That is not tidiness: the site also serves `/auditorium`,
+`/mumford-hall` and `/contact`, which all return 200 but are *different pages* from the ones
+the UI suite covers. Hardcoding the plausible-looking name would test the wrong page and
+still report green.
+
+What it covers: route liveness and content type, `http` → `https` redirect, page identity
+(`collection.title` / `urlId`), site title, the video reference each page declares, whether
+every one of the 23 golden-source gallery images actually loads, the video host as its own
+deliberate test, real 404s on unknown paths, and the contact page still declaring its form
+block.
+
+**One honest limit.** Titles, url ids and video references are structured JSON and genuinely
+immune to HTML drift. Gallery images are not — they appear only inside
+`collection.collections[0].mainContent`, a ~65KB blob of generated markup. So the gallery
+tests here do not assert on that markup at all. They fetch the images and check they return
+200 and an image content type, which no reskin can fake and which the UI suite never
+checked: it asserts a `data-src` attribute is present, and that stays true after the asset
+behind it disappears.
+
+**The contact form endpoint is deliberately not tested.** The form validates in the browser,
+in JavaScript — the same fact behind the hydration race above. An API call skips that
+validation, so a "malformed" POST may simply be delivered as a real enquiry to a real
+nonprofit's inbox, and nothing proves Squarespace rejects it server-side. Confirming it would
+require sending one. The input fields are not even in the served HTML; React builds them. So
+the API layer asserts the form block still exists, and validation behaviour stays with the UI
+tests, which are already marked to stay out of unattended runs.
+
+Also skipped as unfalsifiable noise: `robots.txt` contents, the favicon, the `server` header,
+JSON payload sizes, and response-time budgets.
+
 ## Continuous integration
 
 [`.github/workflows/tests.yml`](.github/workflows/tests.yml) runs the suite headless on
@@ -142,8 +189,8 @@ for two years. Monthly is slow enough to be polite and often enough to catch it.
 Failures arrive by email through GitHub's own Actions notifications (Settings →
 Notifications → Actions → "failed workflows only"); no mail service or secrets required.
 
-CI deselects `submits_real_form`, so it runs 16 of the 18 tests — 8 browser tests plus the
-8 offline unit tests for the healing guard. On failure it uploads the trace, videos, and
+CI deselects `submits_real_form`, so it runs 58 of the 60 tests — 8 browser tests, 42 API
+tests, and 8 offline unit tests for the healing guard. On failure it uploads the trace, videos, and
 screenshots as artifacts.
 
 ## Artifacts
@@ -161,10 +208,12 @@ Every run produces debugging output, all git-ignored:
 test_utility_basepage.py   BasePage — navigation, video verification, test-data helpers
 test_page_classes.py       Page objects: HomePage, AuditoriumPage, RailtonHallPage,
                            MumfordHallPage, ContactPage
-test_script_main.py        Test cases and Playwright fixtures
+test_script_main.py        Browser test cases and Playwright fixtures
+test_api.py                Browserless HTTP and ?format=json checks
+conftest.py                The shared Playwright instance both layers need
 heal_selector.py           Proposes replacements for selectors that stopped matching
 test_heal_selector.py      Offline tests for the healing guard
-pytest.ini                 Marker registration (smoke, regression, unit, submits_real_form)
+pytest.ini                 Markers (smoke, regression, api, unit, submits_real_form)
 .github/workflows/         CI: weekly + manual headless run
 ```
 
@@ -208,5 +257,6 @@ navigation targets component class names instead.
   becomes a problem there: run it headed, or add `pytest-rerunfailures`.
 - Mobile coverage reuses the desktop assertions. It confirms the same content and galleries
   work on a phone, but nothing yet asserts mobile-specific chrome such as the hamburger nav.
-- Fixtures live in `test_script_main.py` rather than a `conftest.py`, so a second test module
-  could not reuse them without moving them first.
+- Only the shared Playwright instance moved to `conftest.py`; the browser and device fixtures
+  still live in `test_script_main.py`. A third module needing a browser would want those moved
+  too.

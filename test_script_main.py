@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import sync_playwright
 from test_utility_basepage import BasePage
 from test_page_classes import HomePage, AuditoriumPage, RailtonHallPage, MumfordHallPage, ContactPage
 
@@ -23,12 +22,6 @@ SLOW_MO = int(os.getenv("SLOW_MO", "0" if HEADLESS else "1000"))
 # engine (firefox, chromium, webkit); left unset it follows the device profile.
 DEVICE = os.getenv("DEVICE")
 BROWSER = os.getenv("BROWSER")
-
-
-@pytest.fixture(scope="session")
-def playwright_instance():
-    with sync_playwright() as playwright:
-        yield playwright
 
 
 @pytest.fixture(scope="session")
