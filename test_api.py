@@ -11,13 +11,19 @@ these tests follow it rather than quietly disagreeing with the UI suite.
 
 WHAT IS DELIBERATELY NOT TESTED HERE
 
-- The contact form endpoint. The form validates in the browser, in JavaScript -
-  which is why a submit landing before hydration posts with no error banner. An
-  API call skips that validation entirely, so a "malformed" POST may simply be
-  delivered as a real enquiry to a real nonprofit's inbox. Nothing proves
-  Squarespace rejects it server-side, and finding out requires sending one. The
-  UI tests already cover validation behaviour, and they are marked to stay out
-  of unattended runs. See README.
+- The contact form endpoint, /api/form/SaveFormSubmission. An instrumented run
+  (POSTs aborted at the network layer) established that validation is
+  server-side: a blank submission returns HTTP 400 with a JSON error body, and
+  creates nothing. So a NEGATIVE API test would in fact be safe - an earlier
+  note here claimed the opposite, reasoning from a client-side-validation
+  assumption that turned out to be wrong.
+
+  It is still left out, for two narrower reasons. A valid submission would
+  create a real enquiry in a real nonprofit's inbox, so the happy path cannot be
+  tested here at all. And the negative path needs a submission key fetched per
+  request, which buys a brittle test for behaviour the UI suite already covers
+  from the user's side. If that changes, the safety argument no longer blocks
+  it; only the cost-benefit does.
 - robots.txt contents, the favicon, the `server` header, JSON payload sizes, and
   the shoppingCart / shareButtons / localizedStrings keys. All present, none
   connected to whether a visitor can use the site. A test that cannot fail in a
@@ -139,9 +145,8 @@ def test_contact_page_still_declares_its_form(api):
 
     This asserts the page still declares the form block and its id - not that
     the input fields exist. The inputs are built by React in the browser and are
-    absent from the served HTML entirely, which is the same fact that makes an
-    API-level validation test unsafe: there is no server-side gate to test
-    against. The fields are the UI suite's job. Nothing here submits.
+    absent from the served HTML entirely, so there is nothing to assert against
+    at this layer. The fields are the UI suite's job. Nothing here submits.
     """
     data = page_json(api, ContactPage.CONTACT_URL.replace(SITE, ""))
     blob = data["collection"]["collections"][0]["mainContent"]

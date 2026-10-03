@@ -160,13 +160,18 @@ tests here do not assert on that markup at all. They fetch the images and check 
 checked: it asserts a `data-src` attribute is present, and that stays true after the asset
 behind it disappears.
 
-**The contact form endpoint is deliberately not tested.** The form validates in the browser,
-in JavaScript — the same fact behind the hydration race above. An API call skips that
-validation, so a "malformed" POST may simply be delivered as a real enquiry to a real
-nonprofit's inbox, and nothing proves Squarespace rejects it server-side. Confirming it would
-require sending one. The input fields are not even in the served HTML; React builds them. So
-the API layer asserts the form block still exists, and validation behaviour stays with the UI
-tests, which are already marked to stay out of unattended runs.
+**The contact form endpoint is not tested, for narrower reasons than first assumed.** An
+instrumented run — every POST aborted at the network layer — established that validation is
+**server-side**: a blank submission to `/api/form/SaveFormSubmission` returns HTTP 400 with a
+JSON error body and creates nothing. An earlier version of this section claimed a negative API
+test would be unsafe because validation was client-side only. That was wrong, and the
+experiment disproved it.
+
+It stays out because a *valid* submission would create a real enquiry in a real nonprofit's
+inbox, so the happy path cannot be tested here at all; and the negative path needs a submission
+key fetched per request, buying a brittle test for behaviour the UI suite already covers from
+the user's side. The input fields are not in the served HTML either — React builds them — so
+the API layer asserts the form block still exists and leaves the rest to the UI tests.
 
 Also skipped as unfalsifiable noise: `robots.txt` contents, the favicon, the `server` header,
 JSON payload sizes, and response-time budgets.
@@ -247,14 +252,17 @@ navigation targets component class names instead.
 
 - The suite targets a third-party Squarespace site, so selectors and the golden image lists
   are coupled to its current markup and will need updating when the site changes.
-- `test_contact_page_negative` is not yet fully reliable headless (roughly 4 runs in 5).
-  The contact form is React-rendered and its handlers bind some time after the page loads,
-  with no dependable readiness signal; a submission that lands too early is silently
-  accepted with no validation banner. `reset_form()` waits for the latest hydration marker
-  available, which helps but does not eliminate it. Headed runs are stable because
-  `slow_mo` paces the interaction. It is excluded from CI anyway by the
-  `submits_real_form` marker, so the flakiness is confined to deliberate local runs. If it
-  becomes a problem there: run it headed, or add `pytest-rerunfailures`.
+- `test_contact_page_negative` is not fully reliable headless (roughly 4 runs in 5), and
+  **the cause is not established**. Measured: the test is flaky headless and stable headed,
+  and waiting on the `react-form-contents` marker in `reset_form()` raised the pass rate from
+  about 1 in 2 to about 4 in 5 — though whether that is genuine readiness or simply added
+  delay is unknown. An earlier version of this note blamed a hydration race in which an early
+  submit posted silently past client-side validation. An instrumented run disproved it: a
+  blank submission POSTs to `/api/form/SaveFormSubmission` whether or not the form has
+  hydrated, and the server rejects it with HTTP 400 and a JSON error body. Validation is
+  server-side. The failing runs show the banner absent, not a submission getting through.
+  Excluded from CI by the `submits_real_form` marker either way. If it becomes a problem
+  locally: run it headed, or add `pytest-rerunfailures`.
 - Mobile coverage reuses the desktop assertions. It confirms the same content and galleries
   work on a phone, but nothing yet asserts mobile-specific chrome such as the hamburger nav.
 - Only the shared Playwright instance moved to `conftest.py`; the browser and device fixtures

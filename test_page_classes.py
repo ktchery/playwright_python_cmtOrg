@@ -157,11 +157,19 @@ class ContactPage(BasePage):
         """Return to a clean, empty form between submissions.
 
         The form is rendered by React after the page loads, so no navigation
-        event marks it ready: at "domcontentloaded" the <form> does not exist
-        yet, and submitting before React binds its handlers silently posts with
-        no validation banner. Waiting for form.react-form-contents is the real
-        readiness signal. Headed runs masked this via slow_mo, so it only
-        surfaced once the suite could run fast.
+        event marks it ready: at "domcontentloaded" the <form> does not exist in
+        the DOM at all, and appears seconds later carrying react-form-contents.
+        Waiting on that marker is the best readiness signal the page offers.
+
+        Validation itself is server-side: a blank submission POSTs to
+        /api/form/SaveFormSubmission and comes back HTTP 400 with the error
+        strings asserted below, which the page then renders. Measured, not
+        assumed - an earlier note here claimed an early submit posted silently
+        past client-side validation, and an instrumented run disproved it.
+
+        This wait raises the headless pass rate from roughly 1 in 2 to 4 in 5.
+        Why it helps is not established: it may be readiness, or simply delay.
+        Headed runs are stable because slow_mo paces them.
         """
         self.page.reload(wait_until="domcontentloaded")
         expect(self.page.locator(self.FORM_READY).first).to_be_visible(timeout=15000)
